@@ -20,9 +20,6 @@ Thumbs.db
 # Local DB credentials override (used on shared hosting without env vars UI)
 /config/db.local.php
 
-# Local web overrides (SMTP, cookieValidationKey, etc.)
-/config/web.local.php
-
 # -----------------------------
 # Dependency/build artifacts
 # -----------------------------
