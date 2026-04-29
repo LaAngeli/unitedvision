@@ -3,6 +3,10 @@
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
 
+$hostName = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
+$normalizedHost = preg_replace('/:\d+$/', '', (string) $hostName);
+$isLocalWeb = in_array($normalizedHost, ['localhost', '127.0.0.1', '::1'], true);
+
 $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
@@ -16,8 +20,9 @@ $config = [
     ],
     'components' => [
         'request' => [
-            // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
-            'cookieValidationKey' => 'UNvU_QGdPMDkjfj9sQ_QkEz5Wb0QqxDS',
+            // Production: set via `config/web.local.php` (gitignored) or `UV_COOKIE_KEY`.
+            // Local dev: a stable placeholder is OK (never reuse this on public hosts).
+            'cookieValidationKey' => getenv('UV_COOKIE_KEY') ?: ($isLocalWeb ? 'LOCAL_ONLY_NOT_FOR_PRODUCTION_COOKIE_KEY' : ''),
             'baseUrl' => '',
         ],
         'cache' => [
@@ -34,18 +39,9 @@ $config = [
         'mailer' => [
             'class' => \yii\symfonymailer\Mailer::class,
             'viewPath' => '@app/mail',
-            'useFileTransport' => false,
-            'transport' => [
-                'class' => 'Swift_SmtpTransport',
-                'scheme' => 'smtps',
-                'host' => 'smtp.mail.ru',
-                'username' => 'ciobanu-23@inbox.ru',
-                'password' => 'uiSkdpgiawvTXYCYzgk9',
-                'port' => 465,
-                'encryption' => 'ssl',
-            ],
-            // send all mails to a file by default.
-
+            // Safe default for repositories: do not ship SMTP credentials in Git.
+            // Configure real SMTP in `config/web.local.php` (gitignored).
+            'useFileTransport' => true,
         ],
         'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0,
@@ -101,6 +97,57 @@ if (YII_ENV_DEV) {
         // uncomment the following to add your IP if you are not connecting from localhost.
         //'allowedIPs' => ['127.0.0.1', '::1'],
     ];
+}
+
+$mergeConfig = static function (array $base, array $override): array {
+    foreach ($override as $key => $value) {
+        if (
+            is_array($value)
+            && array_key_exists($key, $base)
+            && is_array($base[$key])
+        ) {
+            $base[$key] = $mergeConfig($base[$key], $value);
+        } else {
+            $base[$key] = $value;
+        }
+    }
+
+    return $base;
+};
+
+$localWeb = __DIR__ . '/web.local.php';
+if (is_file($localWeb)) {
+    $local = require $localWeb;
+    if (!is_array($local)) {
+        throw new \RuntimeException('Invalid web config: `config/web.local.php` must return an array.');
+    }
+    $config = $mergeConfig($config, $local);
+}
+
+// Basic safety checks for production-like environments.
+if (!$isLocalWeb) {
+    $cookieKey = (string) ($config['components']['request']['cookieValidationKey'] ?? '');
+    if ($cookieKey === '' || $cookieKey === 'LOCAL_ONLY_NOT_FOR_PRODUCTION_COOKIE_KEY') {
+        throw new \RuntimeException(
+            'Missing `cookieValidationKey`. Create `config/web.local.php` (see `config/web.local.example.php`) or set `UV_COOKIE_KEY`.'
+        );
+    }
+
+    $useFileTransport = (bool) ($config['components']['mailer']['useFileTransport'] ?? true);
+    if ($useFileTransport) {
+        throw new \RuntimeException(
+            'Mailer is configured with `useFileTransport=true` on a public host. Configure SMTP in `config/web.local.php` (see `config/web.local.example.php`).'
+        );
+    }
+
+    $transport = $config['components']['mailer']['transport'] ?? null;
+    if (!is_array($transport)) {
+        throw new \RuntimeException('Mailer transport is not configured. Set it in `config/web.local.php`.');
+    }
+
+    if (empty($transport['scheme']) || empty($transport['host'])) {
+        throw new \RuntimeException('Mailer transport must include `scheme` and `host` (see `config/web.local.example.php`).');
+    }
 }
 
 return $config;
