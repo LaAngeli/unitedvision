@@ -17,6 +17,9 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Local DB credentials override (used on shared hosting without env vars UI)
+/config/db.local.php
+
 # -----------------------------
 # Dependency/build artifacts
 # -----------------------------
