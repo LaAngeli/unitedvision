@@ -1,0 +1,58 @@
+# -----------------------------
+# IDE / OS files
+# -----------------------------
+.idea/
+.vscode/
+nbproject/
+.buildpath
+.project
+.settings/
+Thumbs.db
+.DS_Store
+
+# -----------------------------
+# Local environment files
+# -----------------------------
+.env
+.env.*
+!.env.example
+
+# -----------------------------
+# Dependency/build artifacts
+# -----------------------------
+/vendor/
+composer.phar
+phpunit.phar
+
+# Keep lock file versioned for reproducible installs
+# composer.lock
+
+# -----------------------------
+# Runtime / cache / logs (generated)
+# -----------------------------
+/runtime/cache/*
+/runtime/debug/*
+/runtime/logs/*
+/runtime/mail/*
+!/runtime/.gitignore
+
+/web/assets/*
+!/web/assets/.gitignore
+
+# -----------------------------
+# Test artifacts
+# -----------------------------
+/tests/_output/*
+/tests/_support/_generated/
+
+# -----------------------------
+# Local infrastructure / tooling
+# -----------------------------
+/.vagrant/
+/.vercel/
+/node_modules/
+
+# -----------------------------
+# Local DB snapshots/backups
+# -----------------------------
+/db_reference_*/
